@@ -1,0 +1,81 @@
+name: terraform-plan
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  id-token: write        # necesario para pedir el token OIDC
+  contents: read
+  pull-requests: write   # necesario para comentar el plan
+
+env:
+  TF_VAR_location: ${{ vars.GCP_LOCATION }}
+  TF_VAR_owner: ${{ github.repository_owner }}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: hashicorp/setup-terraform@v4
+      - name: Formato
+        run: terraform fmt -check -recursive
+      - name: Validar sintaxis
+        run: |
+          for d in envs/dev envs/prod; do
+            terraform -chdir=$d init -backend=false -input=false
+            terraform -chdir=$d validate
+          done
+      - name: Escaneo de seguridad (Checkov)
+        run: |
+          pip install --quiet "checkov>=3,<4"
+          checkov -d .
+
+  plan:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        env: [dev, prod]
+    env:
+      TF_VAR_project_id: ${{ matrix.env == 'prod' && vars.GCP_PROJECT_PROD || vars.GCP_PROJECT_DEV }}
+    defaults:
+      run:
+        working-directory: envs/${{ matrix.env }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Autenticarse en GCP (OIDC + Workload Identity Federation)
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      - uses: hashicorp/setup-terraform@v4
+      - name: Init
+        run: >
+          terraform init -input=false
+          -backend-config="bucket=${{ vars.TFSTATE_BUCKET }}"
+      - name: Plan
+        id: plan
+        run: terraform plan -no-color -input=false -lock-timeout=120s
+      - name: Comentar el plan en el PR
+        if: always() && steps.plan.outputs.stdout != ''
+        uses: actions/github-script@v8
+        env:
+          PLAN: ${{ steps.plan.outputs.stdout }}
+          ENTORNO: ${{ matrix.env }}
+        with:
+          script: |
+            const marca = `<!-- plan-${process.env.ENTORNO} -->`;
+            const cuerpo = `${marca}\n### Plan de \`${process.env.ENTORNO}\`\n\n` +
+              "```\n" + process.env.PLAN.slice(-60000) + "\n```";
+            const { data: comentarios } = await github.rest.issues.listComments({
+              ...context.repo, issue_number: context.issue.number });
+            const previo = comentarios.find(c => c.body.includes(marca));
+            if (previo) {
+              await github.rest.issues.updateComment({
+                ...context.repo, comment_id: previo.id, body: cuerpo });
+            } else {
+              await github.rest.issues.createComment({
+                ...context.repo, issue_number: context.issue.number, body: cuerpo });
+            }

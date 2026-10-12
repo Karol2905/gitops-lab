@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Laboratorio GitOps</title>
+  <meta name="description" content="Página publicada desde Git con Terraform y GitHub Actions. Explica la arquitectura del laboratorio GitOps.">
+  <style>
+    :root {
+      --paper: #f3f6fa;
+      --surface: #ffffff;
+      --ink: #12263a;
+      --muted: #51657a;
+      --line: #c9d6e2;
+      --azure: #0f6cbd;
+      --azure-soft: #e3effb;
+      --ok: #1b7f53;
+      --ok-soft: #e0f3ea;
+      --wait: #a85f00;
+      --wait-soft: #fdf0d9;
+      --state: #5b4b8a;
+      --state-soft: #ece8f7;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --paper: #0e1a27;
+        --surface: #152435;
+        --ink: #e6eef6;
+        --muted: #9db0c3;
+        --line: #2b3f55;
+        --azure: #5aa9f0;
+        --azure-soft: #143250;
+        --ok: #4cc58b;
+        --ok-soft: #12382a;
+        --wait: #f0b257;
+        --wait-soft: #3a2b12;
+        --state: #b3a3e6;
+        --state-soft: #2a2447;
+      }
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+      font-size: 1.0625rem;
+      line-height: 1.6;
+    }
+    .wrap { max-width: 62rem; margin: 0 auto; padding: 0 1.25rem; }
+    code, .mono { font-family: ui-monospace, "Cascadia Code", "SF Mono", Consolas, monospace; font-size: 0.92em; }
+
+    /* ---------- Portada ---------- */
+    header.hero { padding: 4.5rem 0 3rem; border-bottom: 1px solid var(--line); }
+    .hero h1 {
+      margin: 0 0 1.25rem;
+      font-size: clamp(2.4rem, 7vw, 4.6rem);
+      line-height: 1.02;
+      letter-spacing: -0.035em;
+      font-weight: 800;
+      max-width: 14ch;
+    }
+    .hero .lead { max-width: 38rem; margin: 0 0 2rem; font-size: 1.2rem; color: var(--muted); }
+    .version {
+      display: inline-block;
+      margin: 0;
+      padding: 0.55rem 1rem;
+      border: 2px solid var(--ok);
+      border-radius: 0.4rem;
+      background: var(--ok-soft);
+      color: var(--ok);
+      font-weight: 700;
+      transform: rotate(-1.2deg);
+    }
+
+    /* ---------- Secciones ---------- */
+    section { padding: 3.5rem 0; border-bottom: 1px solid var(--line); }
+    section:last-of-type { border-bottom: 0; }
+    h2 { margin: 0 0 0.6rem; font-size: clamp(1.6rem, 4vw, 2.2rem); letter-spacing: -0.02em; line-height: 1.15; }
+    .sub { margin: 0 0 2rem; max-width: 40rem; color: var(--muted); }
+
+    /* ---------- Recorrido del cambio ---------- */
+    .steps { list-style: none; margin: 0; padding: 0; position: relative; display: grid; gap: 1.5rem; }
+    .steps::before {
+      content: ""; position: absolute; left: 1.05rem; top: 1rem; bottom: 1rem;
+      width: 2px; background: var(--line);
+    }
+    .steps::after {
+      content: ""; position: absolute; left: 1.05rem; top: 1rem; bottom: 1rem;
+      width: 2px; background: var(--ok);
+      transform-origin: top; animation: trazo 1.6s ease-out both;
+    }
+    @keyframes trazo { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+    .steps li { position: relative; padding-left: 3.4rem; }
+    .steps .n {
+      position: absolute; left: 0; top: 0;
+      width: 2.15rem; height: 2.15rem; border-radius: 50%;
+      display: grid; place-items: center;
+      background: var(--surface); border: 2px solid var(--azure); color: var(--azure);
+      font-weight: 700; font-size: 0.95rem;
+    }
+    .steps li.wait .n { border-color: var(--wait); color: var(--wait); }
+    .steps li.here .n { background: var(--ok); border-color: var(--ok); color: var(--surface); }
+    .steps h3 { margin: 0; font-size: 1.1rem; line-height: 1.3; padding-top: 0.2rem; }
+    .steps p { margin: 0.15rem 0 0; color: var(--muted); max-width: 36rem; }
+    @media (min-width: 52rem) {
+      .steps { grid-template-columns: repeat(6, 1fr); gap: 0.75rem; }
+      .steps::before, .steps::after { left: 1.05rem; right: 1.05rem; top: 1.05rem; bottom: auto; width: auto; height: 2px; }
+      .steps::after { transform-origin: left; animation-name: trazo-h; }
+      .steps li { padding: 3.1rem 0.25rem 0 0; }
+      .steps h3 { font-size: 1rem; }
+      .steps p { font-size: 0.92rem; }
+    }
+    @keyframes trazo-h { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+    /* ---------- Diagrama ---------- */
+    .diagram { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 0.6rem; padding: 0.75rem; }
+    .diagram { overflow-x: auto; }
+    .diagram svg { display: block; width: 100%; min-width: 720px; height: auto; }
+    .diagram text { fill: var(--ink); font-family: inherit; font-size: 13px; }
+    .diagram .t-muted { fill: var(--muted); font-size: 12px; }
+    .diagram .t-title { font-weight: 700; font-size: 14px; }
+    .diagram .panel { fill: none; stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .diagram .box { fill: var(--surface); stroke: var(--azure); stroke-width: 1.6; }
+    .diagram .box-state { fill: var(--state-soft); stroke: var(--state); stroke-width: 1.6; }
+    .diagram .box-dev { fill: var(--azure-soft); stroke: var(--azure); stroke-width: 1.6; }
+    .diagram .box-prod { fill: var(--wait-soft); stroke: var(--wait); stroke-width: 1.6; }
+    .diagram .site { fill: var(--surface); stroke: var(--ok); stroke-width: 2; }
+    .diagram .arrow { fill: none; stroke: var(--azure); stroke-width: 1.8; }
+    .diagram .arrow-ok { fill: none; stroke: var(--ok); stroke-width: 1.8; stroke-dasharray: 6 4; }
+    .diagram .head { fill: var(--azure); }
+    .diagram .head-ok { fill: var(--ok); }
+    .diagram .pin { fill: var(--ok); }
+    .diagram .pin-t { fill: #fff; font-weight: 700; font-size: 12px; }
+    figcaption { margin: 0.75rem 0.4rem 0.25rem; color: var(--muted); font-size: 0.95rem; }
+
+    /* ---------- Ideas ---------- */
+    dl.ideas { display: grid; gap: 1.6rem 3rem; margin: 0; }
+    @media (min-width: 52rem) { dl.ideas { grid-template-columns: 1fr 1fr; } }
+    dl.ideas dt { font-weight: 700; font-size: 1.12rem; margin-bottom: 0.2rem; }
+    dl.ideas dd { margin: 0; color: var(--muted); max-width: 30rem; }
+    dl.ideas div { border-left: 3px solid var(--azure); padding-left: 1rem; }
+    dl.ideas div:nth-child(3) { border-color: var(--wait); }
+    dl.ideas div:nth-child(2) { border-color: var(--state); }
+    dl.ideas div:nth-child(4) { border-color: var(--ok); }
+
+    /* ---------- Datos de esta dirección ---------- */
+    table { border-collapse: collapse; width: 100%; max-width: 40rem; background: var(--surface); border: 1px solid var(--line); }
+    th, td { text-align: left; padding: 0.6rem 0.9rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { width: 34%; font-weight: 600; color: var(--muted); }
+    tr:last-child th, tr:last-child td { border-bottom: 0; }
+
+    footer { padding: 2rem 0 3rem; color: var(--muted); font-size: 0.95rem; }
+    a:focus-visible, :focus-visible { outline: 3px solid var(--azure); outline-offset: 3px; }
+    @media (prefers-reduced-motion: reduce) {
+      .steps::after { animation: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="hero">
+    <div class="wrap">
+      <h1>Esta página viajó desde Git hasta Google Cloud</h1>
+      <p class="lead">Nadie la subió a mano. Un cambio en un archivo pasó por revisión, validación y despliegue automático. Abajo está el recorrido y la arquitectura que lo hizo posible.</p>
+      <!-- CAMBIE SOLO EL TEXTO DE LA SIGUIENTE LÍNEA: ponga «Versión 2» y su nombre -->
+      <p class="version" id="version">Versión 1: desplegado desde Git con Terraform.</p>
+    </div>
+  </header>
+
+  <main>
+    <section aria-labelledby="recorrido">
+      <div class="wrap">
+        <h2 id="recorrido">El recorrido de un cambio</h2>
+        <p class="sub">Cada cambio de infraestructura sigue el mismo camino. Solo la última etapa, en <code>prod</code>, necesita a una persona.</p>
+        <ol class="steps">
+          <li><span class="n">1</span><h3>Pull Request</h3><p>Un cambio en el código abre el flujo.</p></li>
+          <li><span class="n">2</span><h3>Validación</h3><p>Formato, sintaxis y análisis de seguridad con Checkov.</p></li>
+          <li><span class="n">3</span><h3>Plan comentado</h3><p>Terraform muestra qué cambiaría antes de tocar nada.</p></li>
+          <li><span class="n">4</span><h3>Merge a main</h3><p>Solo se permite con los checks en verde.</p></li>
+          <li><span class="n">5</span><h3>Despliegue en dev</h3><p>Automático, con un token de pocos minutos.</p></li>
+          <li class="wait"><span class="n">6</span><h3>Aprobación y prod</h3><p>Una persona aprueba y el mismo código llega a producción.</p></li>
+        </ol>
+      </div>
+    </section>
+
+    <section aria-labelledby="arquitectura">
+      <div class="wrap">
+        <h2 id="arquitectura">La arquitectura del laboratorio</h2>
+        <p class="sub">GitHub guarda el código y ejecuta los pipelines. Google Cloud guarda el estado, la identidad y los dos entornos. Entre ambos no hay contraseñas: hay un token que dura minutos.</p>
+        <figure class="diagram">
+          <svg viewBox="0 0 880 410" role="img" aria-labelledby="dg-t dg-d">
+            <title id="dg-t">Arquitectura del laboratorio GitOps</title>
+            <desc id="dg-d">El repositorio de GitHub activa GitHub Actions. Actions pide un token OIDC, Workload Identity Federation lo valida contra el subject vinculado a la cuenta de servicio y entrega un token de acceso de corta duración. Con ese token Terraform despliega en los proyectos de dev y prod, y guarda su estado en el proyecto de estado. Los buckets de dev y prod publican esta página.</desc>
+            <defs>
+              <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="head"/></marker>
+              <marker id="ah-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="head-ok"/></marker>
+            </defs>
+
+            <!-- GitHub -->
+            <rect class="panel" x="10" y="10" width="230" height="390" rx="12"/>
+            <text class="t-title" x="26" y="36">GitHub</text>
+            <rect class="box" x="28" y="56" width="194" height="92" rx="8"/>
+            <text class="t-title" x="42" y="80">Repositorio público</text>
+            <text class="t-muted" x="42" y="100">modules/ y envs/</text>
+            <text class="t-muted" x="42" y="118">site/index.html</text>
+            <text class="t-muted" x="42" y="136">.github/workflows/</text>
+            <rect class="box" x="28" y="196" width="194" height="110" rx="8"/>
+            <text class="t-title" x="42" y="220">GitHub Actions</text>
+            <text class="t-muted" x="42" y="240">plan en cada Pull Request</text>
+            <text class="t-muted" x="42" y="258">apply tras el merge</text>
+            <text class="t-muted" x="42" y="276">drift programado</text>
+            <text class="t-muted" x="42" y="294">destroy manual</text>
+            <path class="arrow" d="M125 148 L125 194" marker-end="url(#ah)"/>
+            <text class="t-muted" x="135" y="176">dispara</text>
+
+            <!-- Google Cloud IAM -->
+            <rect class="panel" x="290" y="10" width="200" height="390" rx="12"/>
+            <text class="t-title" x="306" y="36">Google Cloud IAM</text>
+            <rect class="box" x="308" y="110" width="164" height="150" rx="8"/>
+            <text class="t-title" x="322" y="134">Cuenta de</text>
+            <text class="t-title" x="322" y="152">de servicio</text>
+            <text class="t-muted" x="322" y="176">sa-gitops-github</text>
+            <text class="t-muted" x="322" y="200">Workload Identity:</text>
+            <text class="t-muted" x="322" y="218">4 subjects: PR, main,</text>
+            <text class="t-muted" x="322" y="236">dev y prod</text>
+            <path class="arrow" d="M222 240 L306 200" marker-end="url(#ah)"/>
+            <text class="t-muted" x="232" y="290">1. token OIDC</text>
+            <text class="t-muted" x="232" y="308">2. token de acceso</text>
+
+            <!-- Google Cloud -->
+            <rect class="panel" x="540" y="10" width="330" height="390" rx="12"/>
+            <text class="t-title" x="556" y="36">Google Cloud</text>
+            <rect class="box-state" x="558" y="52" width="294" height="84" rx="8"/>
+            <text class="t-title" x="572" y="76">Proyecto gitops-state</text>
+            <text class="t-muted" x="572" y="96">Bucket con el estado de Terraform</text>
+            <text class="t-muted" x="572" y="114">(versionado, con bloqueo .tflock)</text>
+            <rect class="box-dev" x="558" y="152" width="294" height="110" rx="8"/>
+            <text class="t-title" x="572" y="176">Proyecto gitops-dev</text>
+            <rect class="site" x="572" y="190" width="266" height="58" rx="6"/>
+            <text x="586" y="212">Bucket público de Cloud Storage</text>
+            <text class="t-muted" x="586" y="232">objeto index.html</text>
+            <rect class="box-prod" x="558" y="278" width="294" height="110" rx="8"/>
+            <text class="t-title" x="572" y="302">Proyecto gitops-prod</text>
+            <rect class="site" x="572" y="316" width="266" height="58" rx="6"/>
+            <text x="586" y="338">Bucket público de Cloud Storage</text>
+            <text class="t-muted" x="586" y="358">objeto index.html</text>
+
+            <!-- Terraform -->
+            <path class="arrow-ok" d="M222 340 C 330 380, 440 372, 556 344" marker-end="url(#ah-ok)"/>
+            <text class="t-muted" x="300" y="392">3. terraform apply con ese token</text>
+            <path class="arrow-ok" d="M472 160 C 510 130, 520 100, 556 98" marker-end="url(#ah-ok)"/>
+
+            <!-- Usted está aquí -->
+            <g transform="translate(726 164)">
+              <rect class="pin" x="0" y="0" width="122" height="22" rx="11"/>
+              <text class="pin-t" x="61" y="15" text-anchor="middle">usted está aquí</text>
+            </g>
+          </svg>
+          <figcaption>Los dos sitios, en dev y en prod, son buckets distintos, en proyectos distintos, que publican este mismo archivo.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section aria-labelledby="ideas">
+      <div class="wrap">
+        <h2 id="ideas">Cuatro ideas que sostienen el laboratorio</h2>
+        <p class="sub">Si entiende estas cuatro, entiende por qué el flujo es seguro y repetible.</p>
+        <dl class="ideas">
+          <div><dt>Sin secretos</dt><dd>GitHub entrega un token de pocos minutos. Google Cloud lo acepta solo si el repositorio, la rama o el entorno coinciden con un subject vinculado a la cuenta de servicio.</dd></div>
+          <div><dt>Estado compartido</dt><dd>Terraform anota lo que creó en un bucket de Cloud Storage, con bloqueo y versiones. Así dos ejecuciones nunca se pisan.</dd></div>
+          <div><dt>Aprobación humana</dt><dd>El entorno <code>prod</code> espera. Hasta que alguien aprueba, el job ni siquiera recibe un token para tocar Google Cloud.</dd></div>
+          <div><dt>Detección de deriva</dt><dd>Si alguien cambia algo en la consola, un plan programado lo detecta y abre un issue con la diferencia.</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <section aria-labelledby="direccion">
+      <div class="wrap">
+        <h2 id="direccion">Qué hay detrás de esta dirección</h2>
+        <p class="sub">Un sitio estático en Google Cloud no necesita servidor: un archivo HTML en un bucket con lectura pública.</p>
+        <table>
+          <tr><th scope="row">Servicio</th><td>Cloud Storage, servido en <code>storage.googleapis.com</code></td></tr>
+          <tr><th scope="row">Acceso</th><td><code>allUsers</code> con <code>roles/storage.objectViewer</code>: solo lectura</td></tr>
+          <tr><th scope="row">Archivo</th><td><code>index.html</code>, subido por Terraform</td></tr>
+          <tr><th scope="row">Seguridad</th><td>HTTPS, acceso uniforme a nivel de bucket (sin ACL por objeto), sin claves de cuenta de servicio</td></tr>
+          <tr><th scope="row">Redundancia</th><td>Regional (<code>us-central1</code>): copias en varias zonas de la región</td></tr>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">Laboratorio 6 (versión GCP) de PEMU 2026, Escuela Colombiana de Ingeniería Julio Garavito.</div>
+  </footer>
+
+</body>
+</html>
