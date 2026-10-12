@@ -16,6 +16,24 @@ resource "google_storage_bucket" "site" {
   uniform_bucket_level_access = true
   force_destroy               = true
   labels                      = var.labels
+
+  versioning {
+    enabled = true
+  }
+
+  soft_delete_policy {
+    retention_duration_seconds = 604800
+  }
+
+  lifecycle_rule {
+    condition {
+      num_newer_versions = 3
+      with_state         = "ARCHIVED"
+    }
+    action {
+      type = "Delete"
+    }
+  }
 }
 
 # El sitio es público a propósito: cualquiera puede leer los objetos del bucket.

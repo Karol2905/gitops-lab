@@ -2,4 +2,7 @@ framework:
   - terraform
 compact: true
 quiet: true
-skip-check: []
+skip-check:
+  - CKV_GCP_28    # El bucket es un sitio web público por diseño: allUsers solo tiene objectViewer (lectura), no puede listar, escribir ni borrar.
+  - CKV_GCP_114   # Aplicar la prevención de acceso público bloquearía el permiso allUsers y el sitio dejaría de funcionar
+  - CKV_GCP_62    # Los logs de acceso exigen otro bucket y más permisos; para una página de laboratorio sin datos sensibles el costo supera al beneficio. En producción usaría Cloud Audit Logs.
